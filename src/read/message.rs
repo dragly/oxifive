@@ -43,4 +43,3 @@ pub struct MessageHeaderV2 {
     pub size: u16,
     pub flags: u8,
 }
-

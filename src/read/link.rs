@@ -154,9 +154,7 @@ pub fn parse_link_message(input: &mut Cursor<Vec<u8>>) -> Result<Link, Error> {
         input.read_exact(&mut bytes)?;
         match link_name_encoding {
             LinkNameEncoding::Ascii => std::str::from_utf8(&bytes)?.to_string(),
-            LinkNameEncoding::Utf8 => {
-                std::str::from_utf8(&bytes)?.to_string()
-            }
+            LinkNameEncoding::Utf8 => std::str::from_utf8(&bytes)?.to_string(),
         }
     };
 
