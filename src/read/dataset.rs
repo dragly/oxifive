@@ -193,7 +193,7 @@ impl Dataset {
                             for filter in filter_pipelines.iter().rev() {
                                 log::info!("Running filter {:#?}", filter);
                                 match filter.filter_type {
-                                    FilterType::ShuffleFilter => {
+                                    FilterType::Shuffle => {
                                         // TODO consider using itertools::interleave
                                         let buffer_size = buffer.len();
                                         let mut unshuffled_buffer = vec![0; buffer_size];
@@ -210,7 +210,7 @@ impl Dataset {
                                         }
                                         buffer.copy_from_slice(&unshuffled_buffer[..]);
                                     }
-                                    FilterType::GzipDeflateFilter => {
+                                    FilterType::GzipDeflate => {
                                         let mut reader = Cursor::new(&buffer);
                                         let mut decoder =
                                             flate2::read::ZlibDecoder::new(&mut reader);
