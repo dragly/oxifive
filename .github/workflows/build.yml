@@ -1,0 +1,66 @@
+on:
+  push:
+  schedule:
+    - cron: '15 14 12 * *'
+
+name: Continuous integration
+env:
+  RUSTC_WRAPPER: sccache
+jobs:
+  ci:
+    runs-on: ubuntu-20.04
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      matrix:
+        experimental:
+          - false
+        rust:
+          - stable
+          - 1.52.0  # Minimum supported Rust version
+        include:
+          - rust: beta
+            experimental: true
+          - rust: nightly
+            experimental: true
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: sccache cache files
+        uses: actions/cache@v1.1.0
+        with:
+          path: /home/runner/.cache/sccache
+          key: ${{ matrix.rust }}-sccache-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.rust }}-sccache
+      - name: Download sccache
+        run: |
+          wget https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
+          tar -xvzf sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
+          sudo cp sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /usr/bin/sccache
+          sudo chmod +x /usr/bin/sccache
+          sccache --show-stats
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings

@@ -2,9 +2,9 @@ use crate::error::Error;
 use crate::read::{
     data_object::{self, DataObject},
     group::Group,
+    io::ReadSeek,
     superblock::{self, SuperBlockVersion0},
     symbol_table::SymbolTableEntry,
-    io::ReadSeek,
 };
 
 pub struct FileReader {

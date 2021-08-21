@@ -7,13 +7,13 @@ use std::io::{Read, Seek, SeekFrom};
 #[repr(u16)]
 #[derive(Clone, Debug, TryFromPrimitive)]
 pub enum FilterType {
-    ReservedFilter = 0,
-    GzipDeflateFilter = 1,
-    ShuffleFilter = 2,
-    Fletch32Filter = 3,
-    SzipFilter = 4,
-    NbitFilter = 5,
-    ScaleoffsetFilter = 6,
+    Reserved = 0,
+    GzipDeflate = 1,
+    Shuffle = 2,
+    Fletch32 = 3,
+    Szip = 4,
+    Nbit = 5,
+    Scaleoffset = 6,
 }
 
 #[derive(Clone, Debug)]
