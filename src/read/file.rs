@@ -35,20 +35,8 @@ impl FileReader {
         })
     }
 
-    pub fn group(&mut self, name: &str) -> Result<Group, Error> {
-        self.as_mut_group().group(self, name)
-    }
-
-    pub fn dataset(&mut self, name: &str) -> Result<Dataset, Error> {
-        self.as_mut_group().dataset(self, name)
-    }
-
     pub fn keys(&self) -> Vec<String> {
         self.as_group().keys()
-    }
-
-    pub fn object(&mut self, name: &str) -> Result<DataObject, Error> {
-        self.as_mut_group().object(self, name)
     }
 
     pub fn as_mut_group(&mut self) -> Group {

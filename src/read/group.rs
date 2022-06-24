@@ -23,32 +23,17 @@ impl Group {
             .collect()
     }
 
-    pub fn object(&self, file: &mut FileReader, name: &str) -> Result<DataObject, Error> {
-        let data_link = self
-            .data_object
-            .links
-            .get(name)
-            .ok_or_else(|| Error::OxifiveError(format!("Link '{}' not found", name)))?
-            .clone();
-        let data_address = match data_link.target {
-            LinkTarget::Hard { address } => address,
-            _ => return Err(Error::OxifiveError(format!("Link '{}' is not a hard link", name))),
-        };
-        Ok(parse_data_object(&mut file.input, data_address)?)
-    }
-
-    pub fn group(&self, file: &mut FileReader, name: &str) -> Result<Group, Error> {
-        Ok(Group { data_object: self.object(file, name)? })
-    }
-
-    pub fn dataset(&self, file: &mut FileReader, name: &str) -> Result<Dataset, Error> {
-        Ok(Dataset { data_object: self.object(file, name)? })
+    pub fn get(&self, name: &str) -> Result<&Link, Error> {
+        match self.data_object.links.get(name) {
+            Some(l) => Ok(l),
+            None => Err(Error::OxifiveError(format!("Unknown key name '{name}'"))),
+        }
     }
 }
 
-impl Index<&String> for Group {
+impl Index<&str> for Group {
     type Output = Link;
-    fn index(&self, index: &String) -> &Self::Output {
+    fn index(&self, index: &str) -> &Self::Output {
         &self.data_object.links[index]
     }
 }
