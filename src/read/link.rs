@@ -2,12 +2,16 @@ use crate::error::Error;
 use crate::read::group_btree::parse_group_btree;
 use crate::read::io::ReadSeek;
 use crate::read::local_heap::LocalHeap;
+use crate::read::object::Object;
 use crate::read::symbol_table::{SymbolTableEntry, SymbolTableNode};
+use crate::FileReader;
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
 use std::io::{Cursor, Read, SeekFrom};
+
+use super::data_object::parse_data_object;
 
 bitflags! {
     pub struct LinkFlags : u8 {
@@ -45,6 +49,26 @@ pub struct Link {
     pub flags: LinkFlags,
     pub name: String,
     pub target: LinkTarget,
+}
+
+impl Link {
+    pub fn follow(&self, file: &mut FileReader) -> Result<Object, Error> {
+        let data_address = match self.target {
+            LinkTarget::Hard { address } => address,
+            _ => {
+                return Err(Error::OxifiveError(format!(
+                    "Link '{}' is not a hard link and soft links are not yet supported",
+                    self.name
+                )))
+            }
+        };
+        let data_object = parse_data_object(&mut file.input, data_address)?;
+        if data_object.is_group() {
+            Ok(Object::Group(data_object.as_group()))
+        } else {
+            Ok(Object::Dataset(data_object.as_dataset()))
+        }
+    }
 }
 
 #[repr(u8)]
@@ -154,9 +178,7 @@ pub fn parse_link_message(input: &mut Cursor<Vec<u8>>) -> Result<Link, Error> {
         input.read_exact(&mut bytes)?;
         match link_name_encoding {
             LinkNameEncoding::Ascii => std::str::from_utf8(&bytes)?.to_string(),
-            LinkNameEncoding::Utf8 => {
-                std::str::from_utf8(&bytes)?.to_string()
-            }
+            LinkNameEncoding::Utf8 => std::str::from_utf8(&bytes)?.to_string(),
         }
     };
 

@@ -17,6 +17,7 @@ use std::{
     io::{Cursor, Read, Seek, SeekFrom},
 };
 
+#[derive(Clone, Debug)]
 pub struct Dataset {
     pub data_object: DataObject,
 }

@@ -18,6 +18,8 @@ use std::{
     io::{Cursor, Read, Seek, SeekFrom},
 };
 
+use super::dataset::Dataset;
+
 bitflags! {
     struct ObjectHeaderFlags: u8 {
         const SIZE_OF_CHUNK_BIT_A = 0b000001;
@@ -77,6 +79,12 @@ impl DataObject {
 
     pub fn as_group(self) -> Group {
         Group {
+            data_object: self,
+        }
+    }
+
+    pub fn as_dataset(self) -> Dataset {
+        Dataset {
             data_object: self,
         }
     }

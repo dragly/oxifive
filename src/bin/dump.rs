@@ -1,5 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
+use oxifive::{Group, Object};
 use std::collections::VecDeque;
 use std::{cell::RefCell, fs::File, rc::Rc};
 
@@ -7,6 +8,12 @@ use std::{cell::RefCell, fs::File, rc::Rc};
 #[clap(author, version, about, long_about = None)]
 struct Args {
     filename: String,
+}
+
+struct QueueElement {
+    name: String,
+    group: Group,
+    indentation: usize,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -17,19 +24,35 @@ fn main() -> anyhow::Result<()> {
         .with_context(|| format!("Failed to parse `{filename}`"))?;
     let data_as_group = data.as_group();
     let mut queue = VecDeque::new();
-    queue.push_back(Rc::new(RefCell::new(data_as_group)));
+    queue.push_back(Rc::new(RefCell::new(QueueElement {
+        name: filename,
+        group: data_as_group,
+        indentation: 1,
+    })));
     loop {
         let next = match queue.pop_back() {
             None => break,
             Some(v) => v,
         };
-        let keys = next.borrow().keys();
+        let name = &next.borrow().name;
+        let indentation = next.borrow().indentation;
+        println!("{:->indentation$} {name}", "");
+        let mut keys = next.borrow().group.keys();
+        keys.sort_by(|a, b| b.cmp(a));
         for key in &keys {
-            println!("{key:?}");
-            let object = next.borrow().object(&mut data, key)?;
-            println!("{:#?}", object);
-            if object.is_group() {
-                queue.push_back(Rc::new(RefCell::new(object.as_group())));
+            let object = next.borrow().group[key].follow(&mut data)?;
+            match object {
+                Object::Group(group) => {
+                    queue.push_back(Rc::new(RefCell::new(QueueElement {
+                        name: key.clone(),
+                        group,
+                        indentation: indentation + 1,
+                    })));
+                }
+                Object::Dataset(_) => {
+                    let dataset_indentation = indentation + 1;
+                    println!("{:->dataset_indentation$} {key} [dataset]", "");
+                }
             }
         }
     }

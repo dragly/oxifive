@@ -9,7 +9,7 @@ use crate::read::{
     link::LinkTarget,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Group {
     pub data_object: DataObject,
 }
@@ -43,5 +43,12 @@ impl Group {
 
     pub fn dataset(&self, file: &mut FileReader, name: &str) -> Result<Dataset, Error> {
         Ok(Dataset { data_object: self.object(file, name)? })
+    }
+}
+
+impl Index<&String> for Group {
+    type Output = Link;
+    fn index(&self, index: &String) -> &Self::Output {
+        &self.data_object.links[index]
     }
 }

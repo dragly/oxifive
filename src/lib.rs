@@ -4,3 +4,5 @@ pub mod read;
 
 pub use read::file::FileReader;
 pub use read::io::ReadSeek;
+pub use read::object::Object;
+pub use read::group::Group;
