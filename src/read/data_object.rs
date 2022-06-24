@@ -7,6 +7,7 @@ use crate::read::link::{parse_link_message, parse_symbol_table_message};
 use crate::{
     error::Error,
     read::link::Link,
+    read::group::Group,
     read::message::{MessageHeaderV1, MessageHeaderV2, MessageType},
 };
 use bitflags::bitflags;
@@ -62,6 +63,23 @@ pub struct DataObject {
     pub datatypes: Vec<Datatype>,
     pub dataspaces: Vec<Dataspace>,
     pub filter_pipelines: Vec<FilterPipeline>,
+}
+
+impl DataObject {
+    pub fn is_group(&self) -> bool {
+        // if no dataspaces were found in messages, the object should be a group
+        self.dataspaces.is_empty()
+    }
+
+    pub fn is_dataset(&self) -> bool {
+        !self.is_group()
+    }
+
+    pub fn as_group(self) -> Group {
+        Group {
+            data_object: self,
+        }
+    }
 }
 
 fn parse_message(

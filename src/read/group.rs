@@ -28,11 +28,11 @@ impl Group {
             .data_object
             .links
             .get(name)
-            .ok_or_else(|| Error::OxifiveError(format!("Group '{}' not found", name)))?
+            .ok_or_else(|| Error::OxifiveError(format!("Link '{}' not found", name)))?
             .clone();
         let data_address = match data_link.target {
             LinkTarget::Hard { address } => address,
-            _ => return Err(Error::OxifiveError(format!("{} is not a hard link", name))),
+            _ => return Err(Error::OxifiveError(format!("Link '{}' is not a hard link", name))),
         };
         Ok(parse_data_object(&mut file.input, data_address)?)
     }
@@ -43,12 +43,5 @@ impl Group {
 
     pub fn dataset(&self, file: &mut FileReader, name: &str) -> Result<Dataset, Error> {
         Ok(Dataset { data_object: self.object(file, name)? })
-    }
-}
-
-impl Index<&String> for Group {
-    type Output = Link;
-    fn index(&self, index: &String) -> &Self::Output {
-        &self.data_object.links[index]
     }
 }
