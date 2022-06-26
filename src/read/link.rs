@@ -2,12 +2,16 @@ use crate::error::Error;
 use crate::read::group_btree::parse_group_btree;
 use crate::read::io::ReadSeek;
 use crate::read::local_heap::LocalHeap;
+use crate::read::object::Object;
 use crate::read::symbol_table::{SymbolTableEntry, SymbolTableNode};
+use crate::{Dataset, FileReader, Group};
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
 use std::io::{Cursor, Read, SeekFrom};
+
+use super::data_object::parse_data_object;
 
 bitflags! {
     pub struct LinkFlags : u8 {
@@ -37,6 +41,7 @@ pub enum LinkType {
 pub enum LinkTarget {
     Soft { name: String },
     Hard { address: u64 },
+    Invalid,
 }
 
 #[derive(Clone, Debug)]
@@ -113,7 +118,7 @@ pub fn parse_symbol_table_message(
     Ok(links)
 }
 
-pub fn parse_link_message(input: &mut Cursor<Vec<u8>>) -> Result<Link, Error> {
+pub fn parse_link_message(input: &mut impl ReadSeek) -> Result<Link, Error> {
     let version = input.read_u8()?;
     let flags = LinkFlags::new(input.read_u8()?);
     let link_type = if flags.contains(LinkFlags::LINK_TYPE_FIELD_PRESENT) {
@@ -154,9 +159,7 @@ pub fn parse_link_message(input: &mut Cursor<Vec<u8>>) -> Result<Link, Error> {
         input.read_exact(&mut bytes)?;
         match link_name_encoding {
             LinkNameEncoding::Ascii => std::str::from_utf8(&bytes)?.to_string(),
-            LinkNameEncoding::Utf8 => {
-                std::str::from_utf8(&bytes)?.to_string()
-            }
+            LinkNameEncoding::Utf8 => std::str::from_utf8(&bytes)?.to_string(),
         }
     };
 

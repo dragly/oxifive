@@ -2,5 +2,4 @@ pub mod error;
 pub mod padding;
 pub mod read;
 
-pub use read::file::FileReader;
-pub use read::io::ReadSeek;
+pub use read::{dataset::Dataset, file::FileReader, group::Group, io::ReadSeek, object::Object};

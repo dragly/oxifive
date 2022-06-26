@@ -7,6 +7,7 @@ use crate::read::link::{parse_link_message, parse_symbol_table_message};
 use crate::{
     error::Error,
     read::link::Link,
+    read::group::Group,
     read::message::{MessageHeaderV1, MessageHeaderV2, MessageType},
 };
 use bitflags::bitflags;
@@ -16,6 +17,8 @@ use std::{
     collections::HashMap,
     io::{Cursor, Read, Seek, SeekFrom},
 };
+
+use super::dataset::Dataset;
 
 bitflags! {
     struct ObjectHeaderFlags: u8 {
@@ -62,6 +65,17 @@ pub struct DataObject {
     pub datatypes: Vec<Datatype>,
     pub dataspaces: Vec<Dataspace>,
     pub filter_pipelines: Vec<FilterPipeline>,
+}
+
+impl DataObject {
+    pub fn is_group(&self) -> bool {
+        // if no dataspaces were found in messages, the object should be a group
+        self.dataspaces.is_empty()
+    }
+
+    pub fn is_dataset(&self) -> bool {
+        !self.is_group()
+    }
 }
 
 fn parse_message(
@@ -366,7 +380,7 @@ fn parse_v2_objects(version_hint: u8, input: &mut impl ReadSeek) -> Result<DataO
     })
 }
 
-pub fn parse_data_object(input: &mut impl ReadSeek, offset: u64) -> Result<DataObject, Error> {
+pub fn parse_data_object(input: &mut (impl ReadSeek + Sized), offset: u64) -> Result<DataObject, Error> {
     input.seek(SeekFrom::Start(offset))?;
     let version_hint = input.read_u8()?;
     log::info!("Version hint: {:#?}", version_hint);
