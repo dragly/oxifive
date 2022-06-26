@@ -4,7 +4,7 @@ use crate::read::io::ReadSeek;
 use crate::read::local_heap::LocalHeap;
 use crate::read::object::Object;
 use crate::read::symbol_table::{SymbolTableEntry, SymbolTableNode};
-use crate::FileReader;
+use crate::{Dataset, FileReader, Group};
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
@@ -41,6 +41,7 @@ pub enum LinkType {
 pub enum LinkTarget {
     Soft { name: String },
     Hard { address: u64 },
+    Invalid,
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +53,7 @@ pub struct Link {
 }
 
 impl Link {
-    pub fn follow(&self, file: &mut FileReader) -> Result<Object, Error> {
+    pub fn as_object(&self, file: &mut FileReader) -> Result<Object, Error> {
         let data_address = match self.target {
             LinkTarget::Hard { address } => address,
             _ => {
@@ -67,6 +68,22 @@ impl Link {
             Ok(Object::Group(data_object.as_group()))
         } else {
             Ok(Object::Dataset(data_object.as_dataset()))
+        }
+    }
+
+    pub fn as_group(&self, file: &mut FileReader) -> Result<Group, Error> {
+        let object = self.as_object(file)?;
+        match object {
+            Object::Group(group) => Ok(group),
+            _ => Err(Error::OxifiveError("Not a group".into())), // TODO include name in error
+        }
+    }
+
+    pub fn as_dataset(&self, file: &mut FileReader) -> Result<Dataset, Error> {
+        let object = self.as_object(file)?;
+        match object {
+            Object::Dataset(dataset) => Ok(dataset),
+            _ => Err(Error::OxifiveError("Not a group".into())), // TODO include name in error
         }
     }
 }

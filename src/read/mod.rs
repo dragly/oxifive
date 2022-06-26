@@ -1,6 +1,6 @@
 mod data_object;
 mod data_storage;
-mod dataset;
+pub mod dataset;
 mod dataspace;
 mod datatype;
 mod filter_pipeline;

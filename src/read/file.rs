@@ -50,11 +50,8 @@ impl FileReader {
             data_object: self.data_object.clone(),
         }
     }
-}
 
-impl Index<&String> for FileReader {
-    type Output = Link;
-    fn index(&self, index: &String) -> &Self::Output {
-        &self.data_object.links[index]
+    pub fn get(&self, index: &str) -> Option<Link> {
+        self.data_object.links.get(index).map(|l| l.clone())
     }
 }

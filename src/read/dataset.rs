@@ -48,6 +48,14 @@ add_verifiable_type!(f64, DatatypeEncoding::FloatingPoint, 8);
 add_verifiable_type!(u8, DatatypeEncoding::FixedPoint, 1);
 
 impl Dataset {
+    pub fn shape(&self) -> Vec<u64> {
+        self.data_object.dataspaces[0].shape.clone()
+    }
+
+    pub fn datatype(&self) -> Datatype {
+        self.data_object.datatypes[0].clone()
+    }
+
     pub fn read<T, D>(&self, file: &mut FileReader) -> Result<Array<T, D>, Error>
     where
         T: Clone + Copy + Debug + DatatypeVerifiable + Zero,

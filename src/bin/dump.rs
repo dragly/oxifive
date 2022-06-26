@@ -49,9 +49,13 @@ fn main() -> anyhow::Result<()> {
                         indentation: indentation + 1,
                     })));
                 }
-                Object::Dataset(_) => {
+                Object::Dataset(dataset) => {
                     let dataset_indentation = indentation + 1;
-                    println!("{:->dataset_indentation$} {key} [dataset]", "");
+                    let shape = dataset.shape();
+                    let datatype = dataset.datatype();
+                    let size = datatype.size * 4;
+                    let encoding = datatype.encoding;
+                    println!("{:->dataset_indentation$} {key} [dataset shape {shape:?} type {encoding:?} size {size}]", "");
                 }
             }
         }
