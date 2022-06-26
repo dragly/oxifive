@@ -52,42 +52,6 @@ pub struct Link {
     pub target: LinkTarget,
 }
 
-impl Link {
-    pub fn as_object(&self, file: &mut FileReader) -> Result<Object, Error> {
-        let data_address = match self.target {
-            LinkTarget::Hard { address } => address,
-            _ => {
-                return Err(Error::OxifiveError(format!(
-                    "Link '{}' is not a hard link and soft links are not yet supported",
-                    self.name
-                )))
-            }
-        };
-        let data_object = parse_data_object(&mut file.input, data_address)?;
-        if data_object.is_group() {
-            Ok(Object::Group(data_object.as_group()))
-        } else {
-            Ok(Object::Dataset(data_object.as_dataset()))
-        }
-    }
-
-    pub fn as_group(&self, file: &mut FileReader) -> Result<Group, Error> {
-        let object = self.as_object(file)?;
-        match object {
-            Object::Group(group) => Ok(group),
-            _ => Err(Error::OxifiveError("Not a group".into())), // TODO include name in error
-        }
-    }
-
-    pub fn as_dataset(&self, file: &mut FileReader) -> Result<Dataset, Error> {
-        let object = self.as_object(file)?;
-        match object {
-            Object::Dataset(dataset) => Ok(dataset),
-            _ => Err(Error::OxifiveError("Not a group".into())), // TODO include name in error
-        }
-    }
-}
-
 #[repr(u8)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LinkNameEncoding {
@@ -154,7 +118,7 @@ pub fn parse_symbol_table_message(
     Ok(links)
 }
 
-pub fn parse_link_message(input: &mut Cursor<Vec<u8>>) -> Result<Link, Error> {
+pub fn parse_link_message(input: &mut impl ReadSeek) -> Result<Link, Error> {
     let version = input.read_u8()?;
     let flags = LinkFlags::new(input.read_u8()?);
     let link_type = if flags.contains(LinkFlags::LINK_TYPE_FIELD_PRESENT) {

@@ -1,18 +1,34 @@
-use crate::read::{dataset::Dataset, group::Group, link::Link};
-use std::ops::Index;
+use crate::{
+    error::Error,
+    read::{dataset::Dataset, group::Group},
+    ReadSeek,
+};
 
 #[derive(Clone, Debug)]
-pub enum Object {
-    Group(Group),
-    Dataset(Dataset),
+pub enum Object<R> {
+    Group(Group<R>),
+    Dataset(Dataset<R>),
 }
 
-impl Index<&str> for Object {
-    type Output = Link;
-    fn index(&self, index: &str) -> &Self::Output {
+impl<R: ReadSeek> Object<R> {
+    pub fn object(&self, name: &str) -> Result<Object<R>, Error> {
         match self {
-            Object::Group(group) => &group.data_object.links[index],
-            Object::Dataset(_) => unimplemented!("Indexing datasets is not yet implemented"),
+            Object::Group(group) => group.object(name),
+            _ => Err(Error::OxifiveError(format!("Not a group"))),
+        }
+    }
+
+    pub fn group(&self, name: &str) -> Result<Group<R>, Error> {
+        match self {
+            Object::Group(group) => group.group(name),
+            _ => Err(Error::OxifiveError(format!("Not a group"))),
+        }
+    }
+
+    pub fn dataset(&self, name: &str) -> Result<Dataset<R>, Error> {
+        match self {
+            Object::Group(group) => group.dataset(name),
+            _ => Err(Error::OxifiveError(format!("Not a group"))),
         }
     }
 }

@@ -76,18 +76,6 @@ impl DataObject {
     pub fn is_dataset(&self) -> bool {
         !self.is_group()
     }
-
-    pub fn as_group(self) -> Group {
-        Group {
-            data_object: self,
-        }
-    }
-
-    pub fn as_dataset(self) -> Dataset {
-        Dataset {
-            data_object: self,
-        }
-    }
 }
 
 fn parse_message(
@@ -392,7 +380,7 @@ fn parse_v2_objects(version_hint: u8, input: &mut impl ReadSeek) -> Result<DataO
     })
 }
 
-pub fn parse_data_object(input: &mut impl ReadSeek, offset: u64) -> Result<DataObject, Error> {
+pub fn parse_data_object(input: &mut (impl ReadSeek + Sized), offset: u64) -> Result<DataObject, Error> {
     input.seek(SeekFrom::Start(offset))?;
     let version_hint = input.read_u8()?;
     log::info!("Version hint: {:#?}", version_hint);

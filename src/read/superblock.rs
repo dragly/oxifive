@@ -1,7 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::Read;
-
-use crate::error::Error;
+use crate::{error::Error, ReadSeek};
 
 #[derive(Clone, Debug)]
 pub struct SuperBlockVersion0 {
@@ -23,7 +21,7 @@ pub struct SuperBlockVersion0 {
     pub driver_information_address: u64,
 }
 
-pub fn parse_superblock(input: &mut (impl Read + ?Sized)) -> Result<SuperBlockVersion0, Error> {
+pub fn parse_superblock<R: ReadSeek>(input: &mut R) -> Result<SuperBlockVersion0, Error> {
     let mut format_signature = [0; 8];
     input.read_exact(&mut format_signature)?;
     if format_signature != [137, 72, 68, 70, 13, 10, 26, 10] {

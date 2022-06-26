@@ -5,21 +5,23 @@ use crate::read::{
     dataspace::Dataspace,
     datatype::Datatype,
     datatype::DatatypeEncoding,
-    file::FileReader,
     filter_pipeline::{FilterPipeline, FilterType},
     node::{parse_node, BTreeNode},
 };
+use crate::ReadSeek;
 use ndarray::{Array, ArrayD, Dimension, IxDyn, SliceInfo, SliceInfoElem};
 use num_traits::identities::Zero;
+use std::sync::{Arc, Mutex};
 use std::{
     collections::HashMap,
     fmt::Debug,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Cursor, Read, SeekFrom},
 };
 
 #[derive(Clone, Debug)]
-pub struct Dataset {
+pub struct Dataset<R> {
     pub data_object: DataObject,
+    pub input: Arc<Mutex<R>>,
 }
 
 pub trait DatatypeVerifiable {
@@ -47,7 +49,7 @@ add_verifiable_type!(f32, DatatypeEncoding::FloatingPoint, 4);
 add_verifiable_type!(f64, DatatypeEncoding::FloatingPoint, 8);
 add_verifiable_type!(u8, DatatypeEncoding::FixedPoint, 1);
 
-impl Dataset {
+impl<R: ReadSeek> Dataset<R> {
     pub fn shape(&self) -> Vec<u64> {
         self.data_object.dataspaces[0].shape.clone()
     }
@@ -56,7 +58,7 @@ impl Dataset {
         self.data_object.datatypes[0].clone()
     }
 
-    pub fn read<T, D>(&self, file: &mut FileReader) -> Result<Array<T, D>, Error>
+    pub fn read<T, D>(&self) -> Result<Array<T, D>, Error>
     where
         T: Clone + Copy + Debug + DatatypeVerifiable + Zero,
         D: Dimension,
@@ -72,7 +74,6 @@ impl Dataset {
                 chunk_shape,
                 address,
             } => self.read_chunked(
-                file,
                 &chunk_shape,
                 address,
                 &datatype,
@@ -81,14 +82,13 @@ impl Dataset {
             ),
             DataStorage::Contiguous { address, size } => {
                 assert!(data_object.filter_pipelines.is_empty());
-                self.read_contiguous(file, address, size, &datatype, &dataspace)
+                self.read_contiguous(address, size, &datatype, &dataspace)
             }
         }
     }
 
     fn read_contiguous<T, D>(
         &self,
-        file: &mut FileReader,
         address: u64,
         size: u64,
         datatype: &Datatype,
@@ -101,8 +101,9 @@ impl Dataset {
         T::verify(datatype)?;
 
         let mut buffer = vec![0; size as usize];
-        file.input.seek(SeekFrom::Start(address))?;
-        file.input.read_exact(&mut buffer)?;
+        let mut input = self.input.lock().unwrap();
+        input.seek(SeekFrom::Start(address))?;
+        input.read_exact(&mut buffer)?;
 
         let mut clone = std::mem::ManuallyDrop::new(buffer);
         let vector = unsafe {
@@ -126,7 +127,6 @@ impl Dataset {
 
     fn read_chunked<T, D>(
         &self,
-        file: &mut FileReader,
         chunk_shape: &[u32],
         address: u64,
         datatype: &Datatype,
@@ -142,8 +142,9 @@ impl Dataset {
         log::info!("Data chunk shape {:#?}", chunk_shape);
 
         let dimensions = chunk_shape.len();
+        let input = &mut *self.input.lock().unwrap();
 
-        let root_node = parse_node(&mut file.input, address, dimensions)?;
+        let root_node = parse_node(input, address, dimensions)?;
 
         let mut nodes = HashMap::<u8, Vec<BTreeNode>>::new();
         let mut node_level = root_node.node_level;
@@ -153,7 +154,7 @@ impl Dataset {
             for parent_node in &nodes[&node_level] {
                 for key in &parent_node.keys {
                     let address = key.chunk_address;
-                    next_nodes.push(parse_node(&mut file.input, address, dimensions)?);
+                    next_nodes.push(parse_node(input, address, dimensions)?);
                 }
             }
             let next_node_level = next_nodes[0].node_level;
@@ -181,18 +182,18 @@ impl Dataset {
         for node in &nodes[&0] {
             for node_key in &node.keys {
                 let address = node_key.chunk_address;
-                file.input.seek(SeekFrom::Start(address))?;
+                input.seek(SeekFrom::Start(address))?;
                 let chunk_array = {
                     let byte_buffer = {
                         if filter_pipelines.is_empty() {
                             // TODO compare with chunk_size
                             // TODO might be untested
                             let mut buffer = vec![0; chunk_buffer_size];
-                            file.input.read_exact(&mut buffer)?;
+                            input.read_exact(&mut buffer)?;
                             buffer
                         } else {
                             let mut buffer = vec![0; node_key.chunk_size as usize];
-                            file.input.read_exact(&mut buffer)?;
+                            input.read_exact(&mut buffer)?;
                             if node_key.filter_mask != 0 {
                                 return Err(Error::OxifiveError(format!(
                                     "Filter masks are not yet supported: {}",
