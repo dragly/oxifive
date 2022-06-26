@@ -1,5 +1,3 @@
-use std::io::Read;
-use std::ops::Index;
 use std::sync::{Arc, Mutex};
 
 use crate::Object;
@@ -13,8 +11,6 @@ use crate::read::{
     symbol_table::SymbolTableEntry,
 };
 
-use crate::read::link::Link;
-
 pub struct FileReader<R> {
     pub superblock: SuperBlockVersion0,
     pub root_entry: SymbolTableEntry,
@@ -23,7 +19,8 @@ pub struct FileReader<R> {
 }
 
 impl<R: ReadSeek> FileReader<R> {
-    pub fn new(input: Arc<Mutex<R>>) -> Result<Self, Error> {
+    pub fn new(input: R) -> Result<Self, Error> {
+        let input = Arc::new(Mutex::new(input));
         let reader = &mut *input.lock().unwrap();
         let superblock = superblock::parse_superblock(reader)?;
         log::info!("{:#?}", superblock);

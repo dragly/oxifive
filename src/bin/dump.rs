@@ -3,7 +3,6 @@ use clap::Parser;
 use oxifive::{Group, Object};
 use std::collections::VecDeque;
 use std::{cell::RefCell, fs::File, rc::Rc};
-use std::sync::{Arc, Mutex};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -20,7 +19,7 @@ struct QueueElement<R> {
 fn main() -> anyhow::Result<()> {
     let Args { filename } = Args::parse();
     let file = File::open(&filename).with_context(|| format!("Could not open `{filename}`"))?;
-    let input = Arc::new(Mutex::new(std::io::BufReader::new(file)));
+    let input = std::io::BufReader::new(file);
     let data = oxifive::read::file::FileReader::new(input)
         .with_context(|| format!("Failed to parse `{filename}`"))?;
     let data_as_group = data.as_group();

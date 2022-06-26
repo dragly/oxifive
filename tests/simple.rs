@@ -5,7 +5,6 @@ use ndarray::{array, Ix3};
 #[test]
 fn read_simple() -> Result<(), oxifive::error::Error> {
     let input = std::fs::File::open("tests/files/simple.h5").unwrap();
-    let input = Arc::new(Mutex::new(input));
     let file = oxifive::FileReader::new(input)?;
     let group = file.group("group")?;
     let data = group.dataset("data")?;
